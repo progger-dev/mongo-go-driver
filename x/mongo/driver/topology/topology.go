@@ -29,6 +29,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/x/mongo/driver"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/dns"
+	"go.uber.org/zap"
 )
 
 // Topology state constants.
@@ -522,7 +523,9 @@ func (t *Topology) selectServerFromSubscription(ctx context.Context, subscriptio
 	for {
 		select {
 		case <-ctx.Done():
-			return nil, ServerSelectionError{Wrapped: ctx.Err(), Desc: current}
+			stack := zap.Stack("stack").String
+			err := fmt.Errorf("context error: %s: %w", stack, ctx.Err())
+			return nil, ServerSelectionError{Wrapped: err, Desc: current}
 		case <-selectionState.timeoutChan:
 			return nil, ServerSelectionError{Wrapped: ErrServerSelectionTimeout, Desc: current}
 		case current = <-subscriptionCh:
